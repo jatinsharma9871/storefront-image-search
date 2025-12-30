@@ -83,7 +83,11 @@ export default async function handler(req, res) {
     res.json({ success: true, results });
 
   } catch (err) {
-    console.error("SEARCH ERROR:", err);
-    res.status(500).json({ error: "Search failed" });
-  }
+  console.error("SEARCH ERROR FULL:", err);
+  res.status(500).json({
+    error: "Search failed",
+    message: err?.message,
+    stack: err?.stack
+  });
+}
 }
