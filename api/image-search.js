@@ -3,14 +3,8 @@ import path from "path";
 import formidable from "formidable";
 import { fileURLToPath } from "url";
 
-/**
- * 🔑 FORCE NODE RUNTIME (VERY IMPORTANT)
- */
 export const runtime = "nodejs";
 
-/**
- * Disable body parser (required for multipart)
- */
 export const config = {
   api: {
     bodyParser: false,
@@ -20,72 +14,56 @@ export const config = {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Load vectors.json once (cold start)
 const vectorsPath = path.join(process.cwd(), "vectors.json");
 const VECTORS = JSON.parse(fs.readFileSync(vectorsPath, "utf8"));
 
-export default async function handler(req, res) {
-  /**
-   * 🔑 CORS HEADERS — MUST BE FIRST
-   */
-  res.setHeader("Access-Control-Allow-Origin", "https://thesverve.com");
-  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+export default function handler(req, res) {
+  // 🔑 CORS FIRST
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   res.setHeader(
     "Access-Control-Allow-Headers",
     "Content-Type, Authorization"
   );
 
-  /**
-   * ✅ PRE-FLIGHT (Vercel always sends this)
-   */
+  // Preflight
   if (req.method === "OPTIONS") {
-    res.statusCode = 200;
-    res.end();
+    res.status(200).end();
     return;
   }
 
-  /**
-   * ✅ ONLY ALLOW POST AFTER OPTIONS
-   */
+  // 🔎 DEBUG (Vercel only)
+  console.log("REQ METHOD:", req.method);
+
+  // 🔥 TEMP: allow GET to confirm routing
+  if (req.method === "GET") {
+    return res.status(200).json({
+      success: true,
+      note: "GET request reached API correctly",
+      results: VECTORS.slice(0, 5).map(v => v.id),
+    });
+  }
+
   if (req.method !== "POST") {
-    res.statusCode = 405;
-    res.end(JSON.stringify({ error: "Method not allowed" }));
-    return;
+    return res.status(405).json({ error: "Method not allowed" });
   }
 
-  /**
-   * ✅ PARSE MULTIPART FORM
-   */
   const form = formidable({ multiples: false });
 
   form.parse(req, (err, fields, files) => {
     if (err) {
-      console.error("Form parse error:", err);
-      res.statusCode = 400;
-      res.end(JSON.stringify({ error: "Invalid form data" }));
-      return;
+      console.error("Form error:", err);
+      return res.status(400).json({ error: "Invalid form data" });
     }
 
-    const image = files.image;
-    if (!image) {
-      res.statusCode = 400;
-      res.end(JSON.stringify({ error: "No image uploaded" }));
-      return;
+    if (!files.image) {
+      return res.status(400).json({ error: "No image uploaded" });
     }
 
-    /**
-     * ⚠️ TEMP RESPONSE (API IS NOW VERIFIED)
-     * We will plug real similarity next
-     */
-    const results = VECTORS.slice(0, 12).map(v => v.id);
-
-    res.statusCode = 200;
-    res.setHeader("Content-Type", "application/json");
-    res.end(
-      JSON.stringify({
-        success: true,
-        results,
-      })
-    );
+    // ✅ API confirmed working
+    return res.status(200).json({
+      success: true,
+      results: VECTORS.slice(0, 12).map(v => v.id),
+    });
   });
 }
