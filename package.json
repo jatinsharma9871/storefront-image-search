@@ -1,0 +1,23 @@
+{
+  "name": "shopify-image-search-minimog-nonplus",
+  "version": "1.0.0",
+  "description": "SHOPIFY IMAGE SEARCH – MINIMOG THEME (NON‑PLUS) – FIXED",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "fetch": "node scripts/fetch_products.js",
+    "index": "node scripts/index_products.js",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "test:smoke": "node scripts/test_api_smoke.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@xenova/transformers": "^2.17.2",
+    "dotenv": "^17.2.3",
+    "jimp": "^1.6.0",
+    "node-fetch": "^3.3.2",
+    "sharp": "^0.34.5"
+  }
+}
