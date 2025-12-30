@@ -20,7 +20,7 @@ export default async function handler(req, res) {
   /**
    * 🔑 CORS — MUST be FIRST
    */
-  res.setHeader("Access-Control-Allow-Origin", "https://thesverve.com");
+  res.setHeader("Access-Control-Allow-Origin", "https://if0t4c93km8wrc8q-56868241501.shopifypreview.com");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader(
     "Access-Control-Allow-Headers",
