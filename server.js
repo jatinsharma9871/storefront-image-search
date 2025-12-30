@@ -4,23 +4,24 @@ import imageSearch from "./api/image-search.js";
 
 const app = express();
 
-// CORS (local only)
+// Shopify-safe CORS
 app.use(cors({
   origin: "*",
-  methods: ["POST", "OPTIONS"],
+  methods: ["POST", "GET", "OPTIONS"],
+  allowedHeaders: ["Content-Type"]
 }));
 
-// Preflight
-app.options("/api/image-search", (req, res) => {
-  res.sendStatus(200);
+// Health check
+app.get("/", (_, res) => {
+  res.json({ ok: true, service: "image-search" });
 });
 
-// POST ONLY
-app.post("/api/image-search", async (req, res) => {
+// Image search endpoint
+app.all("/api/image-search", async (req, res) => {
   await imageSearch(req, res);
 });
 
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`✅ Local API running at http://localhost:${PORT}`);
+  console.log(`🚀 Railway server running on port ${PORT}`);
 });

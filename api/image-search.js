@@ -4,38 +4,27 @@ import formidable from "formidable";
 import { fileURLToPath } from "url";
 import { pipeline } from "@xenova/transformers";
 
-/* -------------------- CONFIG -------------------- */
-
-export const runtime = "nodejs";
-
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
-
-/* -------------------- INIT -------------------- */
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Load vectors
 const vectors = JSON.parse(
   fs.readFileSync(path.join(process.cwd(), "vectors.json"), "utf8")
 );
 
-// Lazy-load CLIP (once per cold start)
-let extractorPromise = null;
+// Load CLIP ONCE
+let extractor;
 async function getExtractor() {
-  if (!extractorPromise) {
-    extractorPromise = pipeline(
+  if (!extractor) {
+    console.log("Loading CLIP model...");
+    extractor = await pipeline(
       "feature-extraction",
       "Xenova/clip-vit-base-patch32"
     );
+    console.log("CLIP loaded");
   }
-  return extractorPromise;
+  return extractor;
 }
-
-/* -------------------- UTILS -------------------- */
 
 function cosine(a, b) {
   let dot = 0, na = 0, nb = 0;
@@ -57,68 +46,44 @@ function parseForm(req) {
   });
 }
 
-/* -------------------- HANDLER -------------------- */
-
 export default async function handler(req, res) {
-  /* CORS FIRST */
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
-
- // Preflight
-if (req.method === "OPTIONS") {
-  return res.status(200).end();
-}
-
-// ✅ Allow GET for health check / Shopify preload
-if (req.method === "GET") {
-  return res.status(200).json({
-    ok: true,
-    message: "Image search API is running",
-  });
-}
-
-// Real image search
-if (req.method !== "POST") {
-  return res.status(405).json({ error: "Method not allowed" });
-}
-
+  if (req.method === "OPTIONS") return res.status(200).end();
+  if (req.method === "GET") {
+    return res.json({ ok: true });
+  }
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method not allowed" });
+  }
 
   try {
-    /* 1️⃣ Parse upload */
     const { files } = await parseForm(req);
-
-    if (!files || !files.image) {
+    if (!files.image) {
       return res.status(400).json({ error: "No image uploaded" });
     }
 
     const imageBuffer = fs.readFileSync(files.image.filepath);
 
-    /* 2️⃣ Embed query image */
     const extractor = await getExtractor();
     const query = await extractor(imageBuffer, {
       pooling: "mean",
-      normalize: true,
+      normalize: true
     });
 
     const qv = Array.from(query.data);
 
-    /* 3️⃣ Similarity search */
-    const scored = vectors.map(v => ({
-      handle: v.handle,
-      score: cosine(qv, v.embedding),
-    }));
+    const results = vectors
+      .map(v => ({
+        handle: v.handle,
+        score: cosine(qv, v.embedding)
+      }))
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 12)
+      .map(x => x.handle);
 
-    scored.sort((a, b) => b.score - a.score);
-
-    /* 4️⃣ Respond */
-    return res.status(200).json({
-      success: true,
-      results: scored.slice(0, 12).map(x => x.handle),
-    });
+    res.json({ success: true, results });
 
   } catch (err) {
-    console.error("IMAGE SEARCH ERROR:", err);
-    return res.status(500).json({ error: "Search failed" });
+    console.error("SEARCH ERROR:", err);
+    res.status(500).json({ error: "Search failed" });
   }
 }
