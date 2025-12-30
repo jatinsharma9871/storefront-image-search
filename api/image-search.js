@@ -4,66 +4,48 @@ import formidable from "formidable";
 import { fileURLToPath } from "url";
 
 export const runtime = "nodejs";
-
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
+export const config = { api: { bodyParser: false } };
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const vectorsPath = path.join(process.cwd(), "vectors.json");
-const VECTORS = JSON.parse(fs.readFileSync(vectorsPath, "utf8"));
+const vectors = JSON.parse(
+  fs.readFileSync(path.join(process.cwd(), "vectors.json"), "utf8")
+);
+
+function cosine(a, b) {
+  let dot = 0, na = 0, nb = 0;
+  for (let i = 0; i < a.length; i++) {
+    dot += a[i] * b[i];
+    na += a[i] * a[i];
+    nb += b[i] * b[i];
+  }
+  return dot / (Math.sqrt(na) * Math.sqrt(nb));
+}
 
 export default function handler(req, res) {
-  // 🔑 CORS FIRST
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-  res.setHeader(
-    "Access-Control-Allow-Headers",
-    "Content-Type, Authorization"
-  );
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
-  // Preflight
-  if (req.method === "OPTIONS") {
-    res.status(200).end();
-    return;
-  }
-
-  // 🔎 DEBUG (Vercel only)
-  console.log("REQ METHOD:", req.method);
-
-  // 🔥 TEMP: allow GET to confirm routing
-  if (req.method === "GET") {
-    return res.status(200).json({
-      success: true,
-      note: "GET request reached API correctly",
-      results: VECTORS.slice(0, 5).map(v => v.id),
-    });
-  }
-
-  if (req.method !== "POST") {
+  if (req.method === "OPTIONS") return res.status(200).end();
+  if (req.method !== "POST")
     return res.status(405).json({ error: "Method not allowed" });
-  }
 
   const form = formidable({ multiples: false });
 
-  form.parse(req, (err, fields, files) => {
-    if (err) {
-      console.error("Form error:", err);
-      return res.status(400).json({ error: "Invalid form data" });
+  form.parse(req, async (err, fields, files) => {
+    if (err || !files.image) {
+      return res.status(400).json({ error: "Invalid upload" });
     }
 
-    if (!files.image) {
-      return res.status(400).json({ error: "No image uploaded" });
-    }
+    // TEMP: random similarity placeholder
+    // (replace later with query embedding)
+    const results = vectors.slice(0, 12).map(v => v.handle);
 
-    // ✅ API confirmed working
-    return res.status(200).json({
+    res.status(200).json({
       success: true,
-      results: VECTORS.slice(0, 12).map(v => v.id),
+      results,
     });
   });
 }
