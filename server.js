@@ -4,15 +4,19 @@ import imageSearch from "./api/image-search.js";
 
 const app = express();
 
-// Allow CORS locally
+// CORS (local only)
 app.use(cors({
   origin: "*",
   methods: ["POST", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"]
 }));
 
-// Vercel-style handler wrapper
-app.all("/api/image-search", async (req, res) => {
+// Preflight
+app.options("/api/image-search", (req, res) => {
+  res.sendStatus(200);
+});
+
+// POST ONLY
+app.post("/api/image-search", async (req, res) => {
   await imageSearch(req, res);
 });
 
