@@ -19,7 +19,7 @@
     reader.onload = async () => {
       const base64 = reader.result.split(',')[1];
 
-      const res = await fetch('https://storefront-image-search.vercel.app/api/image-search', {
+      const res = await fetch('https://storefront-image-search-production.up.railway.app', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ image: base64 })
